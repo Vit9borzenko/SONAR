@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  psiopyzer-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: psiopyzer-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      - YANDEX_MUSIC_TOKEN=${YANDEX_MUSIC_TOKEN:-}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - LASTFM_API_KEY=${LASTFM_API_KEY:-}
+      - LASTFM_API_SECRET=${LASTFM_API_SECRET:-}
+    volumes:
+      - psiopyzer_cache:/root/.psiopyzer/cache
+      - psiopyzer_models:/root/.psiopyzer/models
+      - ./data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - psiopyzer_network
+
+  psiopyzer-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: psiopyzer-cli
+    entrypoint: ["python", "-m", "psiopyzer.cli"]
+    environment:
+      - APP_ENV=development
+      - YANDEX_MUSIC_TOKEN=${YANDEX_MUSIC_TOKEN:-}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - LASTFM_API_KEY=${LASTFM_API_KEY:-}
+      - LASTFM_API_SECRET=${LASTFM_API_SECRET:-}
+    volumes:
+      - psiopyzer_cache:/root/.psiopyzer/cache
+      - psiopyzer_models:/root/.psiopyzer/models
+      - ./data:/app/data:ro
+      - .:/app/reports
+    networks:
+      - psiopyzer_network
+
+volumes:
+  psiopyzer_cache:
+    driver: local
+  psiopyzer_models:
+    driver: local
+
+networks:
+  psiopyzer_network:
+    driver: bridge
